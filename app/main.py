@@ -38,6 +38,16 @@ async def lifespan(_: FastAPI):
     except Exception as e:
         print(f"[startup] Error arrancando Telegram (la API sigue activa): {e}", flush=True)
 
+    # Aviso explícito si BASE_URL no está configurado: sin webhook, Telegram
+    # no puede entregar updates y los usuarios verán 502 al escribir comandos.
+    if TELEGRAM_BOT_TOKEN and not telegram.BASE_URL:
+        print(
+            "[startup] ⚠ CRITICO: TELEGRAM_BOT_TOKEN está definido pero BASE_URL no se pudo resolver. "
+            "El webhook de Telegram NO se configuró — los comandos del bot no funcionarán. "
+            "Fija BASE_URL en las variables de entorno (p. ej. https://botserv-production.up.railway.app).",
+            flush=True,
+        )
+
     sched = scheduler.crear()
     sched.start()
     app.state.scheduler = sched
@@ -70,7 +80,13 @@ def health():
     """Healthcheck para Railway: 200 si la base de datos responde."""
     try:
         agentes = bot_db.contar_agentes()
-        return {"ok": True, "bot": bool(TELEGRAM_BOT_TOKEN), "agentes": agentes}
+        webhook_ok = bool(TELEGRAM_BOT_TOKEN and telegram.BASE_URL)
+        return {
+            "ok": True,
+            "bot": bool(TELEGRAM_BOT_TOKEN),
+            "webhook_configurado": webhook_ok,
+            "agentes": agentes,
+        }
     except Exception:
         return JSONResponse(status_code=503, content={"ok": False})
 

@@ -155,13 +155,13 @@ class WebhookArranqueTests(unittest.TestCase):
                 "https://mi-servicio.up.railway.app",
             )
 
-    def test_base_url_efectiva_ignora_el_placeholder(self):
+    def test_base_url_efectiva_ignora_el_placeholder_y_usa_fallback(self):
         with patch.dict("os.environ", {"BASE_URL": "https://tu-app.up.railway.app"}, clear=False):
-            self.assertEqual(telegram._base_url_efectiva(), "")
+            self.assertEqual(telegram._base_url_efectiva(), telegram.DOMINIO_RAILWAY)
 
-    def test_base_url_efectiva_vacia_sin_variable(self):
+    def test_base_url_efectiva_vacia_usa_fallback(self):
         with patch.dict("os.environ", {}, clear=True):
-            self.assertEqual(telegram._base_url_efectiva(), "")
+            self.assertEqual(telegram._base_url_efectiva(), telegram.DOMINIO_RAILWAY)
 
     def test_arrancar_configura_webhook_solo_con_url_real(self):
         app_mock = MagicMock()

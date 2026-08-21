@@ -24,25 +24,40 @@ from . import db
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "").strip()
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
+# Dominio fijo del despliegue en Railway (fallback si no hay BASE_URL ni
+# RAILWAY_PUBLIC_DOMAIN configurados).
+DOMINIO_RAILWAY = "https://botserv-production.up.railway.app"
+
+
 def _base_url_efectiva() -> str:
     """URL pública del servicio para el webhook de Telegram.
 
+    Orden de resolución:
+      1. Variable de entorno BASE_URL (prioridad máxima).
+      2. RAILWAY_PUBLIC_DOMAIN (Railway la inyecta automáticamente).
+      3. DOMINIO_RAILWAY hardcodeado (fallback seguro).
+
     El placeholder del .env.example (tu-app.up.railway.app) NO es una URL
-    real: si quedara configurado, Telegram entregaría los mensajes a una
-    dirección inexistente y el bot "no respondería". Se ignora y se avisa.
+    real: si quedara configurado, se ignora y se usa el fallback.
     """
     url = (
         os.environ.get("BASE_URL", "")
         or (f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}" if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")
     ).strip()
-    if "tu-app.up.railway.app" in url:
-        print(
-            "[bot] ATENCION: BASE_URL contiene el placeholder tu-app.up.railway.app; "
-            "se ignora. Pon tu dominio real de Railway "
-            "(p. ej. https://TU-SERVICIO.up.railway.app).",
-            flush=True,
-        )
-        return ""
+    if "tu-app.up.railway.app" in url or not url:
+        if not url:
+            print(
+                "[bot] BASE_URL no configurado; usando dominio de producción: "
+                f"{DOMINIO_RAILWAY}",
+                flush=True,
+            )
+        else:
+            print(
+                "[bot] ATENCION: BASE_URL contiene el placeholder tu-app.up.railway.app; "
+                f"se usa el dominio de producción: {DOMINIO_RAILWAY}",
+                flush=True,
+            )
+        return DOMINIO_RAILWAY
     return url
 
 
