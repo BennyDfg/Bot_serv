@@ -45,8 +45,7 @@ python -m unittest discover -s tests
    - `TELEGRAM_BOT_TOKEN` — el token de [@BotFather](https://t.me/BotFather).
    - `API_TOKEN` — token largo que escribes en Ajustes de cada app (sección «Agente y servidor»).
    - `BASE_URL` — la URL pública `https://…up.railway.app` que te da Railway (para el webhook del bot).
-   - `RESUMEN_HORA` — `22:30` (opcional).
-   - `TZ` — `Europe/Madrid` (opcional).
+   - `RESUMEN_HORA` — `22:30` (opcional).    - `TZ` — `America/Havana` (hora de Cuba; opcional).
 5. Abre el grupo de Telegram, añade el bot al grupo y escribe `/start`: el bot queda activo en ese grupo.
 6. En la app de cada agente: **Ajustes → Agente y servidor** → URL del servidor (`https://tu-app.up.railway.app`) y Token (`API_TOKEN`), y pulsa **Sincronizar ahora**.
 

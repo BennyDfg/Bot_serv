@@ -13,7 +13,7 @@ from apscheduler.triggers.cron import CronTrigger
 
 from . import telegram
 
-ZONA_CONFIGURADA = os.environ.get("TZ", "Europe/Madrid")
+ZONA_CONFIGURADA = os.environ.get("TZ", "America/Havana")
 
 
 def _zona_valida() -> str:
