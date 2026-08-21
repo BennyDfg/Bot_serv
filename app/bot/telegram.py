@@ -24,10 +24,29 @@ from . import db
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "").strip()
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
-BASE_URL = (
-    os.environ.get("BASE_URL", "")
-    or (f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}" if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")
-).strip()
+def _base_url_efectiva() -> str:
+    """URL pública del servicio para el webhook de Telegram.
+
+    El placeholder del .env.example (tu-app.up.railway.app) NO es una URL
+    real: si quedara configurado, Telegram entregaría los mensajes a una
+    dirección inexistente y el bot "no respondería". Se ignora y se avisa.
+    """
+    url = (
+        os.environ.get("BASE_URL", "")
+        or (f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}" if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")
+    ).strip()
+    if "tu-app.up.railway.app" in url:
+        print(
+            "[bot] ATENCION: BASE_URL contiene el placeholder tu-app.up.railway.app; "
+            "se ignora. Pon tu dominio real de Railway "
+            "(p. ej. https://TU-SERVICIO.up.railway.app).",
+            flush=True,
+        )
+        return ""
+    return url
+
+
+BASE_URL = _base_url_efectiva()
 
 # Consultas activas en memoria: consulta_id -> estado, para ir editando el
 # mensaje mientras llegan respuestas. Se pierden al reiniciar el proceso; las
