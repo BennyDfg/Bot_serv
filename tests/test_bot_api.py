@@ -74,6 +74,42 @@ class BotDbTests(unittest.TestCase):
         self.assertEqual(len(bot_api.tareas("dev-1").get("tareas")), 1)
         self.assertEqual(len(bot_api.tareas("dev-2").get("tareas")), 1)
 
+    def test_registrar_devuelve_habilitada(self):
+        self.assertTrue(bot_api.registrar(self._registrar())["habilitada"])
+
+    def test_tareas_devuelven_habilitada(self):
+        bot_api.registrar(self._registrar())
+        self.assertTrue(bot_api.tareas("dev-1")["habilitada"])
+
+    def test_deshabilitar_y_habilitar_un_agente(self):
+        bot_api.registrar(self._registrar())
+        self.assertTrue(bot_db.set_habilitada("dev-1", False))
+        self.assertFalse(bot_db.es_habilitada("dev-1"))
+        self.assertFalse(bot_db.obtener_agente("dev-1")["habilitada"])
+        self.assertFalse(bot_api.tareas("dev-1")["habilitada"])
+        self.assertTrue(bot_db.set_habilitada("dev-1", True))
+        self.assertTrue(bot_db.es_habilitada("dev-1"))
+
+    def test_deshabilitar_todos(self):
+        bot_api.registrar(self._registrar())
+        bot_api.registrar(self._registrar(device="dev-2", nombre="Ana", telefono="611222333"))
+        self.assertEqual(bot_db.set_habilitada_todos(False), 2)
+        self.assertFalse(bot_db.es_habilitada("dev-1"))
+        self.assertFalse(bot_db.es_habilitada("dev-2"))
+        self.assertEqual(bot_db.set_habilitada_todos(True), 2)
+        self.assertTrue(bot_db.es_habilitada("dev-1"))
+
+    def test_re_registro_no_reactiva_a_un_deshabilitado(self):
+        bot_api.registrar(self._registrar())
+        bot_db.set_habilitada("dev-1", False)
+        # El agente vuelve a registrarse (polling): no debe desbloquearse.
+        bot_api.registrar(self._registrar(nombre="Juan Carlos"))
+        self.assertFalse(bot_db.es_habilitada("dev-1"))
+        self.assertEqual(bot_db.obtener_agente("dev-1")["nombre"], "Juan Carlos")
+
+    def test_set_habilitada_agente_inexistente_devuelve_false(self):
+        self.assertFalse(bot_db.set_habilitada("no-existe", False))
+
 
 if __name__ == "__main__":
     unittest.main()

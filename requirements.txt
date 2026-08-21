@@ -3,3 +3,5 @@ uvicorn>=0.30
 python-telegram-bot>=21.0
 apscheduler>=3.10,<4.0
 python-dotenv>=1.0
+SQLAlchemy>=2.0
+psycopg[binary]>=3.1

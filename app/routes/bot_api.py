@@ -23,12 +23,13 @@ class RespuestaIn(BaseModel):
 def registrar(payload: RegistrarIn):
     if not payload.device_id.strip() or not payload.nombre.strip():
         raise HTTPException(status_code=400, detail="device_id y nombre son obligatorios.")
+    device_id = payload.device_id.strip()
     bot_db.registrar_agente(
-        payload.device_id.strip(),
+        device_id,
         payload.nombre.strip(),
         payload.telefono.strip(),
     )
-    return {"ok": True}
+    return {"ok": True, "habilitada": bot_db.es_habilitada(device_id)}
 
 
 @router.get("/agentes")
@@ -39,7 +40,10 @@ def listar():
 @router.get("/agentes/{device_id}/tareas")
 def tareas(device_id: str):
     bot_db.tocar_conexion(device_id)
-    return {"tareas": bot_db.tareas_pendientes(device_id)}
+    return {
+        "tareas": bot_db.tareas_pendientes(device_id),
+        "habilitada": bot_db.es_habilitada(device_id),
+    }
 
 
 @router.post("/agentes/{device_id}/respuesta")

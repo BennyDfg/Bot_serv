@@ -23,6 +23,7 @@ from . import db
 
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "").strip()
+WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
 BASE_URL = (
     os.environ.get("BASE_URL", "")
     or (f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}" if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")
@@ -65,20 +66,21 @@ class ConsultaActiva:
             ag = db.obtener_agente(d)
             nombre = ag["nombre"] if ag else d
             tel = (ag or {}).get("telefono", "")
+            prefijo = "⛔ " if ag and not ag.get("habilitada", True) else ""
             if d in self.respuestas:
                 r = self.respuestas[d]
                 if self.tipo == "auditoria":
                     ultima = (ag or {}).get("ultima_conexion") or "—"
                     lineas.append(
-                        f"• {nombre} ({tel}): {r.get('hoy', 0)} hoy · {r.get('total', 0)} total"
+                        f"• {prefijo}{nombre} ({tel}): {r.get('hoy', 0)} hoy · {r.get('total', 0)} total"
                         f" · conexión {ultima[:16]}"
                     )
                 else:
                     lineas.append(
-                        f"• {nombre} ({tel}): {r.get('hoy', 0)} hoy · {r.get('total', 0)} total"
+                        f"• {prefijo}{nombre} ({tel}): {r.get('hoy', 0)} hoy · {r.get('total', 0)} total"
                     )
             else:
-                lineas.append(f"• {nombre}: ⏳ sin conexión (en cola)")
+                lineas.append(f"• {prefijo}{nombre}: ⏳ sin conexión (en cola)")
         return "\n".join(lineas)
 
 
@@ -87,6 +89,13 @@ def es_chat_destino(chat_id: int | None) -> bool:
         return False
     destino = db.get_config("chat_destino") or OWNER_CHAT_ID
     return bool(destino) and str(chat_id) == destino
+
+
+def verificar_secret(header: str | None) -> bool:
+    """Valida la cabecera del webhook. Sin WEBHOOK_SECRET no se exige."""
+    if not WEBHOOK_SECRET:
+        return True
+    return header == WEBHOOK_SECRET
 
 
 # ---------------- comandos ----------------
@@ -118,7 +127,8 @@ async def cmd_agentes(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lineas = ["📋 Agentes registrados:"]
     for a in agentes:
         ultima = (a.get("ultima_conexion") or "—")[:16]
-        lineas.append(f"• {a['nombre']} ({a['telefono']}) · conexión {ultima}")
+        estado = "✅" if a.get("habilitada", True) else "⛔"
+        lineas.append(f"{estado} {a['nombre']} ({a['telefono']}) · conexión {ultima}")
     await update.effective_message.reply_text("\n".join(lineas))
 
 
@@ -155,6 +165,69 @@ async def cmd_consulta(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
     await _iniciar_consulta(update.effective_chat.id, "auditoria", [candidatos[0]["device_id"]])
+
+
+def _resolver_agente(termino: str) -> tuple[dict | None, str | None]:
+    """Devuelve (agente, error) buscando por nombre o teléfono exacto."""
+    candidatos = db.buscar_agente(termino)
+    if not candidatos:
+        return None, f"No encontré a «{termino}»."
+    if len(candidatos) > 1:
+        lista = "\n".join(f"• {a['nombre']} ({a['telefono']})" for a in candidatos)
+        return None, f"Hay varios agentes que coinciden. Usa el teléfono exacto:\n{lista}"
+    return candidatos[0], None
+
+
+async def cmd_deshabilitar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not es_chat_destino(update.effective_chat.id):
+        await update.effective_message.reply_text("⛔ No autorizado.")
+        return
+    termino = (context.args[0] if context.args else "").strip()
+    if not termino:
+        await update.effective_message.reply_text("Uso: /deshabilitar <nombre o teléfono>")
+        return
+    agente, error = _resolver_agente(termino)
+    if error:
+        await update.effective_message.reply_text(error)
+        return
+    db.set_habilitada(agente["device_id"], False)
+    await update.effective_message.reply_text(
+        f"⛔ App deshabilitada para {agente['nombre']} ({agente['telefono']})."
+    )
+
+
+async def cmd_habilitar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not es_chat_destino(update.effective_chat.id):
+        await update.effective_message.reply_text("⛔ No autorizado.")
+        return
+    termino = (context.args[0] if context.args else "").strip()
+    if not termino:
+        await update.effective_message.reply_text("Uso: /habilitar <nombre o teléfono>")
+        return
+    agente, error = _resolver_agente(termino)
+    if error:
+        await update.effective_message.reply_text(error)
+        return
+    db.set_habilitada(agente["device_id"], True)
+    await update.effective_message.reply_text(
+        f"✅ App habilitada para {agente['nombre']} ({agente['telefono']})."
+    )
+
+
+async def cmd_deshabilitar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not es_chat_destino(update.effective_chat.id):
+        await update.effective_message.reply_text("⛔ No autorizado.")
+        return
+    n = db.set_habilitada_todos(False)
+    await update.effective_message.reply_text(f"⛔ Se deshabilitaron {n} app(s).")
+
+
+async def cmd_habilitar_todos(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not es_chat_destino(update.effective_chat.id):
+        await update.effective_message.reply_text("⛔ No autorizado.")
+        return
+    n = db.set_habilitada_todos(True)
+    await update.effective_message.reply_text(f"✅ Se habilitaron {n} app(s).")
 
 
 # ---------------- consultas ----------------
@@ -249,6 +322,10 @@ def iniciar() -> None:
     app.add_handler(CommandHandler("agentes", cmd_agentes))
     app.add_handler(CommandHandler("resumen", cmd_resumen))
     app.add_handler(CommandHandler("consulta", cmd_consulta))
+    app.add_handler(CommandHandler("deshabilitar", cmd_deshabilitar))
+    app.add_handler(CommandHandler("habilitar", cmd_habilitar))
+    app.add_handler(CommandHandler("deshabilitar_todos", cmd_deshabilitar_todos))
+    app.add_handler(CommandHandler("habilitar_todos", cmd_habilitar_todos))
     application = app
 
 
@@ -259,7 +336,7 @@ async def arrancar() -> None:
     await application.start()
     if BASE_URL:
         url = BASE_URL.rstrip("/") + "/webhook/telegram"
-        await application.bot.set_webhook(url)
+        await application.bot.set_webhook(url, secret_token=WEBHOOK_SECRET or None)
         print(f"[bot] Webhook configurado en {url}", flush=True)
     else:
         print("[bot] Sin BASE_URL: solo API (sin webhook de Telegram)", flush=True)
