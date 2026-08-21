@@ -36,7 +36,41 @@ Tests:
 python -m unittest discover -s tests
 ```
 
-## Despliegue en Railway
+## Despliegue en Render (plan gratuito)
+
+1. Sube este repositorio a GitHub (el repo es `BennyDfg/Bot_serv`).
+2. En [render.com](https://render.com) → **New → Blueprint** → conecta GitHub
+   y elige el repo. Render lee `render.yaml` y crea el servicio **Web** con
+   plan **Free**.
+3. Durante la creación te pide las variables `sync: false`:
+   - `TELEGRAM_BOT_TOKEN` — el token de [@BotFather](https://t.me/BotFather).
+   - `API_TOKEN` — token largo que escribes en Ajustes de cada app (sección «Agente y servidor»).
+   - `BASE_URL` — déjala vacía: Render la resuelve solo con `RENDER_EXTERNAL_URL`.
+   - `OWNER_CHAT_ID` — opcional.
+   - `DATABASE_URL` — vacía para SQLite (ver nota de persistencia).
+   (`WEBHOOK_SECRET` se genera solo.)
+4. Abre el grupo de Telegram, añade el bot y escribe `/start`: queda activo ahí.
+5. En la app de cada agente: **Ajustes → Agente y servidor** → URL del
+   servidor (`https://<nombre>.onrender.com`) y Token (`API_TOKEN`), y pulsa
+   **Sincronizar ahora**.
+
+### Límites del plan Free de Render
+
+- **Se duerme a los 15 min sin tráfico** y tarda ~1 min en despertar con la
+  siguiente petición. Para que el bot responda y el resumen diario (22:30) se
+  dispare, mantenlo despierto con un ping externo cada ~10 min a
+  `https://<nombre>.onrender.com/health` (p. ej. [UptimeRobot](https://uptimerobot.com)
+  o [cron-job.org](https://cron-job.org), ambos con plan gratis).
+- **Disco efímero**: con SQLite (sin `DATABASE_URL`) los datos se pierden en
+  cada redeploy, reinicio o spin-down (15 min de inactividad). Las apps se
+  re-registran solas cada 30 min, pero el grupo destino (`/start`) y las
+  tareas en cola se pierden. Para que sobreviva a los spin-downs, añade un
+  **Postgres** (Render ofrece uno Free, pero **expira a los 30 días**).
+- **750 horas Free/mes** por workspace: un servicio despierto 24/7 consume
+  ~720-744 h/mes. Si se acaban, Render suspende los servicios Free hasta el
+  mes siguiente.
+
+## Despliegue en Railway (alternativa)
 
 1. Sube este repositorio a GitHub (el backend va en este repo).
 2. En [railway.app](https://railway.app) → **New Project → Deploy from GitHub repo** → elige este repo.

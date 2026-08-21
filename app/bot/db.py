@@ -2,7 +2,7 @@
 
 - En local / desarrollo: SQLite (un solo archivo `data/bot.db`, sin proceso
   que mantener).
-- En Railway / producción: Postgres, configurado con la variable
+- En Render / Railway / producción: Postgres, configurado con la variable
   `DATABASE_URL` (p. ej. `postgresql+psycopg://usuario:clave@host:5432/db`).
 
 El interfaz de funciones (`registrar_agente`, `tareas_pendientes`,

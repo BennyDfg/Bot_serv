@@ -137,8 +137,10 @@ class BotComandosTests(unittest.TestCase):
 
 
 class WebhookArranqueTests(unittest.TestCase):
-    """El webhook solo se configura con una URL real, nunca con el
-    placeholder del .env.example (regresión: tu-app.up.railway.app)."""
+    """El webhook solo se configura con una URL real, nunca con un
+    placeholder del .env.example (regresión: tu-app.up.railway.app /
+    tu-app.onrender.com). Sin URL resoluble se devuelve vacío y el
+    webhook queda desactivado."""
 
     def setUp(self):
         telegram.TOKEN = "token-test"
@@ -155,13 +157,34 @@ class WebhookArranqueTests(unittest.TestCase):
                 "https://mi-servicio.up.railway.app",
             )
 
-    def test_base_url_efectiva_ignora_el_placeholder_y_usa_fallback(self):
-        with patch.dict("os.environ", {"BASE_URL": "https://tu-app.up.railway.app"}, clear=False):
-            self.assertEqual(telegram._base_url_efectiva(), telegram.DOMINIO_RAILWAY)
+    def test_base_url_efectiva_con_render_external_url(self):
+        with patch.dict("os.environ", {"RENDER_EXTERNAL_URL": "https://mi-bot.onrender.com"}, clear=True):
+            self.assertEqual(
+                telegram._base_url_efectiva(),
+                "https://mi-bot.onrender.com",
+            )
 
-    def test_base_url_efectiva_vacia_usa_fallback(self):
+    def test_base_url_efectiva_prioriza_base_url_sobre_render(self):
+        with patch.dict("os.environ", {
+            "BASE_URL": "https://dominio-propio.com",
+            "RENDER_EXTERNAL_URL": "https://mi-bot.onrender.com",
+        }, clear=True):
+            self.assertEqual(
+                telegram._base_url_efectiva(),
+                "https://dominio-propio.com",
+            )
+
+    def test_base_url_efectiva_ignora_el_placeholder(self):
+        with patch.dict("os.environ", {"BASE_URL": "https://tu-app.up.railway.app"}, clear=False):
+            self.assertEqual(telegram._base_url_efectiva(), "")
+
+    def test_base_url_efectiva_ignora_el_placeholder_de_render(self):
+        with patch.dict("os.environ", {"BASE_URL": "https://tu-app.onrender.com"}, clear=False):
+            self.assertEqual(telegram._base_url_efectiva(), "")
+
+    def test_base_url_efectiva_vacia_devuelve_vacio(self):
         with patch.dict("os.environ", {}, clear=True):
-            self.assertEqual(telegram._base_url_efectiva(), telegram.DOMINIO_RAILWAY)
+            self.assertEqual(telegram._base_url_efectiva(), "")
 
     def test_arrancar_configura_webhook_solo_con_url_real(self):
         app_mock = MagicMock()

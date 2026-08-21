@@ -24,9 +24,6 @@ from . import db
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "").strip()
 WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
-# Dominio fijo del despliegue en Railway (fallback si no hay BASE_URL ni
-# RAILWAY_PUBLIC_DOMAIN configurados).
-DOMINIO_RAILWAY = "https://botserv-production.up.railway.app"
 
 
 def _base_url_efectiva() -> str:
@@ -34,30 +31,25 @@ def _base_url_efectiva() -> str:
 
     Orden de resolución:
       1. Variable de entorno BASE_URL (prioridad máxima).
-      2. RAILWAY_PUBLIC_DOMAIN (Railway la inyecta automáticamente).
-      3. DOMINIO_RAILWAY hardcodeado (fallback seguro).
+      2. RENDER_EXTERNAL_URL (Render la inyecta automáticamente).
+      3. RAILWAY_PUBLIC_DOMAIN (Railway la inyecta automáticamente).
 
-    El placeholder del .env.example (tu-app.up.railway.app) NO es una URL
-    real: si quedara configurado, se ignora y se usa el fallback.
+    El placeholder del .env.example (tu-app.up.railway.app / tu-app.onrender.com)
+    NO es una URL real: si quedara configurado, se ignora y se devuelve vacío,
+    de modo que el webhook queda desactivado (main.py avisa en el arranque).
     """
     url = (
         os.environ.get("BASE_URL", "")
+        or os.environ.get("RENDER_EXTERNAL_URL", "")
         or (f"https://{os.environ['RAILWAY_PUBLIC_DOMAIN']}" if os.environ.get("RAILWAY_PUBLIC_DOMAIN") else "")
     ).strip()
-    if "tu-app.up.railway.app" in url or not url:
-        if not url:
-            print(
-                "[bot] BASE_URL no configurado; usando dominio de producción: "
-                f"{DOMINIO_RAILWAY}",
-                flush=True,
-            )
-        else:
-            print(
-                "[bot] ATENCION: BASE_URL contiene el placeholder tu-app.up.railway.app; "
-                f"se usa el dominio de producción: {DOMINIO_RAILWAY}",
-                flush=True,
-            )
-        return DOMINIO_RAILWAY
+    if "tu-app.up.railway.app" in url or "tu-app.onrender.com" in url:
+        print(
+            "[bot] ATENCION: BASE_URL contiene un placeholder; el webhook queda desactivado. "
+            "Fija la URL real (en Render se resuelve solo con RENDER_EXTERNAL_URL).",
+            flush=True,
+        )
+        return ""
     return url
 
 

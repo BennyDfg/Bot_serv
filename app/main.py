@@ -13,7 +13,7 @@ from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
 from fastapi.responses import JSONResponse
 
-load_dotenv()  # .env local (gitignored); en Railway se usan variables reales
+load_dotenv()  # .env local (gitignored); en Render/Railway se usan variables reales
 
 from .bot import db as bot_db
 from .bot import scheduler, telegram
@@ -26,7 +26,7 @@ TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 async def lifespan(_: FastAPI):
     # Un fallo al inicializar la DB o el webhook de Telegram no debe impedir
     # que la API levante: se registra y se sigue (antes, una excepción aquí
-    # mataba el arranque y Railway reiniciaba el servicio en bucle).
+    # mataba el arranque y el host reiniciaba el servicio en bucle).
     try:
         bot_db.inicializar()
     except Exception as e:
@@ -44,7 +44,8 @@ async def lifespan(_: FastAPI):
         print(
             "[startup] ⚠ CRITICO: TELEGRAM_BOT_TOKEN está definido pero BASE_URL no se pudo resolver. "
             "El webhook de Telegram NO se configuró — los comandos del bot no funcionarán. "
-            "Fija BASE_URL en las variables de entorno (p. ej. https://botserv-production.up.railway.app).",
+            "Fija BASE_URL en las variables de entorno (en Render se resuelve solo con "
+            "RENDER_EXTERNAL_URL; en Railway con RAILWAY_PUBLIC_DOMAIN).",
             flush=True,
         )
 
@@ -77,7 +78,7 @@ async def webhook_telegram(request: Request):
 
 @app.get("/health")
 def health():
-    """Healthcheck para Railway: 200 si la base de datos responde."""
+    """Healthcheck para Render/Railway: 200 si la base de datos responde."""
     try:
         agentes = bot_db.contar_agentes()
         webhook_ok = bool(TELEGRAM_BOT_TOKEN and telegram.BASE_URL)
