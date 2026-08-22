@@ -208,5 +208,22 @@ class WebhookArranqueTests(unittest.TestCase):
         app_mock.bot.set_webhook.assert_not_awaited()
 
 
+class SecretSanitizacionTests(unittest.TestCase):
+    """El secret_token del webhook solo puede llevar A-Z, a-z, 0-9, _ y -."""
+
+    def test_conserva_caracteres_permitidos(self):
+        self.assertEqual(telegram._sanitizar_secret("Abz-09_XY"), "Abz-09_XY")
+
+    def test_elimina_caracteres_no_permitidos(self):
+        self.assertEqual(telegram._sanitizar_secret("a.b/c+d=e!f$g:h"), "abcdefgh")
+
+    def test_vacio_o_solo_no_permitidos_devuelve_vacio(self):
+        self.assertEqual(telegram._sanitizar_secret(""), "")
+        self.assertEqual(telegram._sanitizar_secret("...///"), "")
+
+    def test_trunca_a_256_caracteres(self):
+        self.assertEqual(len(telegram._sanitizar_secret("a" * 300)), 256)
+
+
 if __name__ == "__main__":
     unittest.main()

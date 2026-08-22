@@ -21,9 +21,34 @@ from telegram.ext import Application, CommandHandler, ContextTypes
 
 from . import db
 
+
+def _sanitizar_secret(valor: str) -> str:
+    """Deja el secret_token del webhook solo con caracteres que Telegram permite.
+
+    Telegram exige A-Z, a-z, 0-9, _ y - (1-256 caracteres) para el secret_token
+    de set_webhook. Render/Railway pueden generar secretos con otros caracteres
+    (puntos, barras, símbolos…) y entonces el arranque fallaba con
+    "secret token contains unallowed characters". Se filtran aquí para que el
+    webhook se configure siempre; el mismo valor filtrado se usa al verificar la
+    cabecera X-Telegram-Bot-Api-Secret-Token.
+    """
+    crudo = (valor or "").strip()
+    limpio = "".join(
+        c for c in crudo
+        if ("a" <= c <= "z") or ("A" <= c <= "Z") or ("0" <= c <= "9") or c in "-_"
+    )
+    if crudo != limpio:
+        print(
+            "[bot] ATENCION: WEBHOOK_SECRET tenía caracteres no permitidos por Telegram; "
+            "se han eliminado (el webhook sigue protegido).",
+            flush=True,
+        )
+    return limpio[:256]
+
+
 TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
 OWNER_CHAT_ID = os.environ.get("OWNER_CHAT_ID", "").strip()
-WEBHOOK_SECRET = os.environ.get("WEBHOOK_SECRET", "").strip()
+WEBHOOK_SECRET = _sanitizar_secret(os.environ.get("WEBHOOK_SECRET", ""))
 
 
 def _base_url_efectiva() -> str:

@@ -23,6 +23,7 @@ Uso:
 import argparse
 import json
 import os
+import secrets
 import sys
 import urllib.error
 import urllib.request
@@ -93,7 +94,9 @@ def _variables(env: dict) -> list[dict]:
     variables = [
         {"key": "TELEGRAM_BOT_TOKEN", "value": token},
         {"key": "API_TOKEN", "value": api_token},
-        {"key": "WEBHOOK_SECRET", "generateValue": True},
+        # token_urlsafe usa el alfabeto base64url (A-Z a-z 0-9 - _), que es
+        # exactamente lo que Telegram admite para el secret_token del webhook.
+        {"key": "WEBHOOK_SECRET", "value": secrets.token_urlsafe(32)},
         {"key": "RESUMEN_HORA", "value": env.get("RESUMEN_HORA", "22:30")},
         {"key": "TZ", "value": env.get("TZ", "America/Havana")},
     ]

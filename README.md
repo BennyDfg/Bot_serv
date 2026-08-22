@@ -48,7 +48,8 @@ python -m unittest discover -s tests
    - `BASE_URL` — déjala vacía: Render la resuelve solo con `RENDER_EXTERNAL_URL`.
    - `OWNER_CHAT_ID` — opcional.
    - `DATABASE_URL` — vacía para SQLite (ver nota de persistencia).
-   (`WEBHOOK_SECRET` se genera solo.)
+   (`WEBHOOK_SECRET` se genera solo; Telegram solo admite A-Z, a-z, 0-9, _ y -,
+   y la app filtra el resto automáticamente si Render genera otros caracteres.)
 4. Abre el grupo de Telegram, añade el bot y escribe `/start`: queda activo ahí.
 5. En la app de cada agente: **Ajustes → Agente y servidor** → URL del
    servidor (`https://<nombre>.onrender.com`) y Token (`API_TOKEN`), y pulsa

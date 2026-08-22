@@ -7,7 +7,14 @@ Sin TELEGRAM_BOT_TOKEN la parte de Telegram se desactiva y la API para las
 apps sigue funcionando (útil para pruebas locales).
 """
 import os
+import sys
 from contextlib import asynccontextmanager
+
+# En consolas Windows la salida usa cp1252 y los emojis/acentos de los logs
+# (p. ej. «⚠») rompen el arranque con UnicodeEncodeError. Se fuerza UTF-8.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
 
 from dotenv import load_dotenv
 from fastapi import FastAPI, Request, Response
