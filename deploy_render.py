@@ -76,7 +76,9 @@ def _servicio_existente(key: str, owner_id: str) -> dict | None:
     )
     servicios = datos if isinstance(datos, list) else datos.get("data", [])
     for s in servicios:
-        if s.get("name") == NOMBRE:
+        # La API de Render envuelve cada servicio en {"cursor":..., "service":{...}}.
+        svc = s.get("service") if isinstance(s, dict) and "service" in s else s
+        if svc.get("name") == NOMBRE:
             return s
     return None
 
