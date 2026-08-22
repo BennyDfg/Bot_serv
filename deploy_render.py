@@ -31,6 +31,12 @@ from pathlib import Path
 
 from dotenv import load_dotenv
 
+# En consolas Windows (cp1252) los caracteres «→»/«⚠» de los logs rompen el
+# script al imprimir el resultado. Se fuerza UTF-8.
+for _stream in (sys.stdout, sys.stderr):
+    if hasattr(_stream, "reconfigure"):
+        _stream.reconfigure(encoding="utf-8", errors="replace")
+
 API_BASE = "https://api.render.com/v1"
 NOMBRE = "bot-serv"
 REPO = "https://github.com/BennyDfg/Bot_serv"
